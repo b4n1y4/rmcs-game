@@ -3,8 +3,61 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { io } from 'socket.io-client';
 import Chit from '@/components/Chit';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Trophy } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Trophy, ChevronDown } from 'lucide-react';
+
+const CustomSelect = ({ value, onChange, options }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(o => o.value === value) || options[0];
+
+  return (
+    <div ref={ref} style={{ position: 'relative', width: '100%' }}>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+      >
+        <span style={{ fontSize: '0.95rem' }}>{selectedOption.label}</span>
+        <motion.div animate={{ rotate: isOpen ? 180 : 0 }} transition={{ duration: 0.2 }}>
+           <ChevronDown size={18} opacity={0.7} />
+        </motion.div>
+      </div>
+      
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.15 }}
+            style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '8px', background: '#1e1e2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', zIndex: 10, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
+          >
+            {options.map((opt) => (
+              <div 
+                key={opt.value}
+                onClick={() => { onChange(opt.value); setIsOpen(false); }}
+                style={{ padding: '12px 16px', cursor: 'pointer', fontSize: '0.95rem', background: value === opt.value ? 'rgba(139, 92, 246, 0.2)' : 'transparent', color: value === opt.value ? 'var(--accent-gold)' : 'white', transition: 'all 0.2s', display: 'flex', alignItems: 'center' }}
+                onMouseEnter={(e) => { if(value !== opt.value) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                onMouseLeave={(e) => { if(value !== opt.value) e.currentTarget.style.background = 'transparent' }}
+              >
+                {opt.label}
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 export default function OnlineGame() {
   const router = useRouter();
@@ -152,16 +205,16 @@ export default function OnlineGame() {
               <div style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px' }}>
                  <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--accent-gold)' }}>Game Settings</label>
                  {me?.isCreator ? (
-                    <select 
-                      value={maxRounds} 
-                      onChange={(e) => updateRounds(parseInt(e.target.value))}
-                      style={{ width: '100%', padding: '10px', borderRadius: '8px', background: 'rgba(255,255,255,0.1)', border: '1px solid var(--glass-border)', color: 'white', fontFamily: 'inherit' }}
-                    >
-                      <option value={3}>3 Rounds</option>
-                      <option value={5}>5 Rounds</option>
-                      <option value={10}>10 Rounds</option>
-                      <option value={-1}>Unlimited Rounds</option>
-                    </select>
+                    <CustomSelect
+                      value={maxRounds}
+                      onChange={(val) => updateRounds(val)}
+                      options={[
+                        { value: 3, label: '3 Rounds' },
+                        { value: 5, label: '5 Rounds' },
+                        { value: 10, label: '10 Rounds' },
+                        { value: -1, label: 'Unlimited Rounds' }
+                      ]}
+                    />
                  ) : (
                     <div style={{ padding: '10px', border: '1px solid var(--glass-border)', borderRadius: '8px', opacity: 0.8, fontSize: '0.9rem' }}>
                        {maxRounds === -1 ? 'Unlimited Rounds' : `${maxRounds} Rounds Game`} (Only Host can change)
